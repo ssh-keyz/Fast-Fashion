@@ -3,7 +3,7 @@ import { Card, CardHeader, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { 
+import {
   Sheet,
   SheetContent,
   SheetDescription,
@@ -11,14 +11,14 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "@/components/ui/sheet";
-import { 
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { 
+import {
   Table,
   TableBody,
   TableCell,
@@ -26,7 +26,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { 
+import {
   Share2,
   Heart,
   ShoppingCart,
@@ -102,6 +102,99 @@ const SIZE_GUIDE: Record<string, SizeGuide> = {
   XL: { size: 'XL', chest: 40, waist: 32, hips: 42, views: 0 },
 };
 
+// Near the top where interfaces are defined
+interface CartItem {
+  id: number;
+  name: string;
+  basePrice: number;
+  selectedOptions: string[];
+  finalPrice: number;
+  image: string;
+}
+
+// Update the existing PRODUCTS array
+const PRODUCTS = [
+  {
+    id: 1,
+    name: "Classic T-Shirt",
+    basePrice: 20,
+    category: "tops",
+    image: "/api/placeholder/300/400",
+    sustainableOptions: [
+      { id: 'organic', name: 'Organic Cotton', price: 7 },
+      { id: 'shipping', name: 'Carbon-Neutral Shipping', price: 5 },
+      { id: 'fair-labor', name: 'Fair Labor Certified', price: 4 },
+      { id: 'recycled', name: 'Recyclable Packaging', price: 2 }
+    ]
+  },
+  {
+    id: 2,
+    name: "Slim-Fit Jeans",
+    basePrice: 45,
+    category: "bottoms",
+    image: "/api/placeholder/300/400",
+    sustainableOptions: [
+      { id: 'organic', name: 'Organic Denim', price: 10 },
+      { id: 'shipping', name: 'Carbon-Neutral Shipping', price: 5 },
+      { id: 'fair-labor', name: 'Fair Labor Certified', price: 4 },
+      { id: 'recycled', name: 'Recyclable Packaging', price: 2 }
+    ]
+  },
+  {
+    id: 3,
+    name: "Cozy Hoodie",
+    basePrice: 35,
+    category: "tops",
+    image: "/api/placeholder/300/400",
+    sustainableOptions: [
+      { id: 'organic', name: 'Organic Cotton Blend', price: 8 },
+      { id: 'shipping', name: 'Carbon-Neutral Shipping', price: 5 },
+      { id: 'fair-labor', name: 'Fair Labor Certified', price: 4 },
+      { id: 'recycled', name: 'Recyclable Packaging', price: 2 }
+    ]
+  },
+  {
+    id: 4,
+    name: "Summer Dress",
+    basePrice: 55,
+    category: "dresses",
+    image: "/api/placeholder/300/400",
+    sustainableOptions: [
+      { id: 'organic', name: 'Organic Cotton', price: 12 },
+      { id: 'shipping', name: 'Carbon-Neutral Shipping', price: 5 },
+      { id: 'fair-labor', name: 'Fair Labor Certified', price: 4 },
+      { id: 'recycled', name: 'Recyclable Packaging', price: 2 }
+    ]
+  },
+  {
+    id: 5,
+    name: "Athletic Shorts",
+    basePrice: 30,
+    category: "bottoms",
+    image: "/api/placeholder/300/400",
+    sustainableOptions: [
+      { id: 'organic', name: 'Recycled Polyester', price: 8 },
+      { id: 'shipping', name: 'Carbon-Neutral Shipping', price: 5 },
+      { id: 'fair-labor', name: 'Fair Labor Certified', price: 4 },
+      { id: 'recycled', name: 'Recyclable Packaging', price: 2 }
+    ]
+  },
+  {
+    id: 6,
+    name: "Evening Maxi Dress",
+    basePrice: 75,
+    category: "dresses",
+    image: "/api/placeholder/300/400",
+    sustainableOptions: [
+      { id: 'organic', name: 'Organic Silk Blend', price: 15 },
+      { id: 'shipping', name: 'Carbon-Neutral Shipping', price: 5 },
+      { id: 'fair-labor', name: 'Fair Labor Certified', price: 4 },
+      { id: 'recycled', name: 'Recyclable Packaging', price: 2 }
+    ]
+  }
+  // Add more products here...
+];
+
 // Environmental Impact Calculator
 const calculateEnvironmentalImpact = (options: string[]) => {
   const impacts = {
@@ -133,28 +226,54 @@ const calculateEnvironmentalImpact = (options: string[]) => {
 };
 
 // Enhanced Product Card Component
-const ProductCard = ({ 
-  product, 
-  onAddToCompare, 
+interface ProductCardProps {
+  product: {
+    id: number;
+    name: string;
+    basePrice: number;
+    category: string;
+    image: string;
+    sustainableOptions: Array<{
+      id: string;
+      name: string;
+      price: number;
+    }>;
+  };
+  onAddToCompare: (product: ProductCardProps['product']) => void;
+  onAddToWishlist: (product: ProductCardProps['product']) => void;
+  compareList: number[];
+  wishlist: number[];
+  analytics: EnhancedAnalytics;
+  setAnalytics: React.Dispatch<React.SetStateAction<EnhancedAnalytics>>;
+  batchAnalyticsUpdate: (update: (prev: EnhancedAnalytics) => EnhancedAnalytics) => void;
+}
+
+const ProductCard = React.memo(({
+  product,
+  onAddToCompare,
   onAddToWishlist,
   compareList,
   wishlist,
   analytics,
-  setAnalytics 
-}) => {
+  setAnalytics,
+  batchAnalyticsUpdate
+}: ProductCardProps) => {
   const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
   const [selectedSize, setSelectedSize] = useState('');
   const [selectedColor, setSelectedColor] = useState('');
   const [showSizeGuide, setShowSizeGuide] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const hoverStartTime = useRef<number>(0);
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [giftCardBalance, setGiftCardBalance] = useState(100);
+  const [selectedCategory, setSelectedCategory] = useState('all');
 
   // Mouse tracking
   useEffect(() => {
     const trackMouseMovement = (e: MouseEvent) => {
       if (!cardRef.current) return;
       const rect = cardRef.current.getBoundingClientRect();
-      const isInside = 
+      const isInside =
         e.clientX >= rect.left &&
         e.clientX <= rect.right &&
         e.clientY >= rect.top &&
@@ -216,6 +335,15 @@ const ProductCard = ({
 
   const impact = calculateEnvironmentalImpact(selectedOptions);
 
+  // Add this helper function inside ProductCard
+  const calculateTotalPrice = (selectedOpts: string[]) => {
+    const optionsTotal = selectedOpts.reduce((sum, optionId) => {
+      const option = product.sustainableOptions.find(opt => opt.id === optionId);
+      return sum + (option?.price || 0);
+    }, 0);
+    return product.basePrice + optionsTotal;
+  };
+
   return (
     <Card ref={cardRef} className="w-full relative">
       <CardHeader className="p-0">
@@ -257,7 +385,82 @@ const ProductCard = ({
       </CardHeader>
 
       <CardContent className="p-4 space-y-4">
-        {/* ... existing product content ... */}
+        <div className="flex justify-between items-start">
+          <div>
+            <h3 className="text-lg font-semibold">{product.name}</h3>
+            <p className="text-xl font-bold">${calculateTotalPrice(selectedOptions)}</p>
+          </div>
+          <Badge variant="secondary">
+            {product.category}
+          </Badge>
+        </div>
+        
+        <div className="space-y-3">
+          {product.sustainableOptions.map(option => (
+            <div key={option.id} className="flex items-center justify-between">
+              <label className="flex items-center space-x-2">
+                <input
+                  type="checkbox"
+                  checked={selectedOptions.includes(option.id)}
+                  onChange={() => {
+                    setSelectedOptions(prev => 
+                      prev.includes(option.id)
+                        ? prev.filter(id => id !== option.id)
+                        : [...prev, option.id]
+                    );
+                    batchAnalyticsUpdate(prev => ({
+                      ...prev,
+                      productInteractions: {
+                        ...prev.productInteractions,
+                        optionToggles: {
+                          ...prev.productInteractions.optionToggles,
+                          [product.id]: [
+                            ...(prev.productInteractions.optionToggles[product.id] || []),
+                            { option: option.id, timestamp: Date.now() }
+                          ]
+                        }
+                      }
+                    }));
+                  }}
+                  className="rounded"
+                />
+                <span>{option.name}</span>
+              </label>
+              <span>+${option.price}</span>
+            </div>
+          ))}
+        </div>
+
+        <Button 
+          className="w-full"
+          onClick={() => {
+            const totalPrice = calculateTotalPrice(selectedOptions);
+            if (totalPrice <= giftCardBalance) {
+              setCart(prev => [...prev, { 
+                ...product, 
+                selectedOptions,
+                finalPrice: totalPrice 
+              }]);
+              setGiftCardBalance(prev => prev - totalPrice);
+              batchAnalyticsUpdate(prev => ({
+                ...prev,
+                productInteractions: {
+                  ...prev.productInteractions,
+                  optionToggles: {
+                    ...prev.productInteractions.optionToggles,
+                    [product.id]: [
+                      ...(prev.productInteractions.optionToggles[product.id] || []),
+                      { option: 'purchase', timestamp: Date.now() }
+                    ]
+                  }
+                }
+              }));
+            }
+          }}
+          disabled={calculateTotalPrice(selectedOptions) > giftCardBalance}
+        >
+          Add to Cart
+        </Button>
 
         <div className="mt-4 p-4 bg-green-50 rounded-lg">
           <h4 className="font-semibold mb-2">Environmental Impact</h4>
@@ -331,10 +534,15 @@ const ProductCard = ({
       </CardContent>
     </Card>
   );
-};
+});
 
 // Compare Drawer Component
-const CompareDrawer = ({ products, onClose }) => {
+interface CompareDrawerProps {
+  products: ProductCardProps['product'][];
+  onClose: () => void;
+}
+
+const CompareDrawer = React.memo(({ products, onClose }: CompareDrawerProps) => {
   return (
     <Sheet>
       <SheetContent side="right" className="w-[400px]">
@@ -376,16 +584,25 @@ const CompareDrawer = ({ products, onClose }) => {
       </SheetContent>
     </Sheet>
   );
-};
+});
 
-// Error Boundary
-class ErrorBoundary extends React.Component {
-  constructor(props) {
+// First, let's add proper types for the ErrorBoundary component
+interface ErrorBoundaryProps {
+  children: React.ReactNode;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+}
+
+// Update the ErrorBoundary class with proper typing
+class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
     super(props);
     this.state = { hasError: false };
   }
 
-  static getDerivedStateFromError(error) {
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
     return { hasError: true };
   }
 
@@ -406,8 +623,9 @@ class ErrorBoundary extends React.Component {
 
 // Main Component
 const SustainableFashionPlatform = () => {
-  const [compareList, setCompareList] = useState([]);
-  const [wishlist, setWishlist] = useState([]);
+  const [compareList, setCompareList] = useState<number[]>([]);
+  const [wishlist, setWishlist] = useState<number[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState('all');
   const [analytics, setAnalytics] = useState<EnhancedAnalytics>({
     mouseTracking: {
       heatmapData: [],
@@ -415,12 +633,9 @@ const SustainableFashionPlatform = () => {
       clickPositions: []
     },
     sessionContext: {
-      entryPoint: window.location.pathname,
+      entryPoint: '',
       exitPoint: '',
-      navigationPath: [{
-        page: window.location.pathname,
-        timestamp: Date.now()
-      }],
+      navigationPath: [],
       interactionGaps: []
     },
     productInteractions: {
@@ -434,14 +649,50 @@ const SustainableFashionPlatform = () => {
       sustainabilityCorrelations: {}
     }
   });
+  const [cart, setCart] = useState<CartItem[]>([]);
+  const [giftCardBalance, setGiftCardBalance] = useState(100);
+
+  // Initialize session context after component mounts
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setAnalytics(prev => ({
+        ...prev,
+        sessionContext: {
+          ...prev.sessionContext,
+          entryPoint: window.location.pathname,
+          navigationPath: [{
+            page: window.location.pathname,
+            timestamp: Date.now()
+          }]
+        }
+      }));
+    }
+  }, []);
+
+  // Load wishlist from localStorage after mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedWishlist = localStorage.getItem('wishlist');
+      if (savedWishlist) {
+        try {
+          const parsed = JSON.parse(savedWishlist);
+          if (Array.isArray(parsed)) {
+            setWishlist(parsed);
+          }
+        } catch (e) {
+          console.error('Failed to parse wishlist from localStorage:', e);
+        }
+      }
+    }
+  }, []);
 
   // Batch analytics updates
-  const analyticsQueue = useRef([]);
-  const batchTimeout = useRef(null);
+  const analyticsQueue = useRef<Array<(prev: EnhancedAnalytics) => EnhancedAnalytics>>([]);
+  const batchTimeout = useRef<NodeJS.Timeout | null>(null);
 
-  const batchAnalyticsUpdate = useCallback((update) => {
+  const batchAnalyticsUpdate = useCallback((update: (prev: EnhancedAnalytics) => EnhancedAnalytics) => {
     analyticsQueue.current.push(update);
-    
+
     if (!batchTimeout.current) {
       batchTimeout.current = setTimeout(() => {
         setAnalytics(prev => {
@@ -459,26 +710,270 @@ const SustainableFashionPlatform = () => {
 
   // Session tracking
   useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        setAnalytics(prev => ({
-          ...prev,
-          sessionContext: {
-            ...prev.sessionContext,
-            exitPoint: window.location.pathname
-          }
-        }));
-      }
-    };
+    if (typeof window !== 'undefined') {
+      const handleVisibilityChange = () => {
+        if (document.hidden) {
+          setAnalytics(prev => ({
+            ...prev,
+            sessionContext: {
+              ...prev.sessionContext,
+              exitPoint: window.location.pathname
+            }
+          }));
+        }
+      };
 
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+      document.addEventListener('visibilitychange', handleVisibilityChange);
+      return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+    }
   }, []);
 
-  // ... rest of the existing component code ...
+  // Clean up batch timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (batchTimeout.current) {
+        clearTimeout(batchTimeout.current);
+      }
+    };
+  }, []);
 
   return (
     <ErrorBoundary>
       <div className="max-w-7xl mx-auto p-6">
-        {/* ... existing layout ... */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-2xl font-bold">Sustainable Fashion Platform</h1>
+          <div className="flex items-center space-x-4">
+            <div className="text-lg">
+              Gift Card Balance: ${giftCardBalance}
+            </div>
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="outline" className="relative">
+                  <ShoppingCart className="h-5 w-5" />
+                  {cart.length > 0 && (
+                    <Badge className="absolute -top-2 -right-2">
+                      {cart.length}
+                    </Badge>
+                  )}
+                </Button>
+              </SheetTrigger>
+              <SheetContent>
+                <SheetHeader>
+                  <SheetTitle>Shopping Cart</SheetTitle>
+                  <SheetDescription>
+                    Your selected sustainable fashion items
+                  </SheetDescription>
+                </SheetHeader>
+                <div className="mt-6 space-y-4">
+                  {cart.map((item, index) => (
+                    <div key={`${item.id}-${index}`} className="flex items-center justify-between">
+                      <div className="flex items-center space-x-4">
+                        <img
+                          src={item.image}
+                          alt={item.name}
+                          className="w-16 h-16 object-cover rounded"
+                        />
+                        <div>
+                          <h4 className="font-semibold">{item.name}</h4>
+                          <p className="text-sm text-gray-500">${item.finalPrice}</p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          setCart(prev => prev.filter((_, i) => i !== index));
+                          setGiftCardBalance(prev => prev + item.finalPrice);
+                        }}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </SheetContent>
+            </Sheet>
+          </div>
+        </div>
+
+        <div className="mb-6">
+          <Select
+            value={selectedCategory}
+            onValueChange={(value) => setSelectedCategory(value)}
+          >
+            <SelectTrigger className="w-[180px]">
+              <SelectValue placeholder="Select category" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              <SelectItem value="tops">Tops</SelectItem>
+              <SelectItem value="bottoms">Bottoms</SelectItem>
+              <SelectItem value="dresses">Dresses</SelectItem>
+              {/* Add other categories as needed */}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {PRODUCTS.filter(product => 
+            selectedCategory === 'all' || product.category === selectedCategory
+          ).map(product => (
+            <ProductCard
+              key={product.id}
+              product={product}
+              onAddToCompare={(product) => {
+                if (compareList.includes(product.id)) {
+                  setCompareList(prev => prev.filter(id => id !== product.id));
+                } else if (compareList.length < 3) {
+                  setCompareList(prev => [...prev, product.id]);
+                  batchAnalyticsUpdate(prev => ({
+                    ...prev,
+                    productInteractions: {
+                      ...prev.productInteractions,
+                      optionToggles: {
+                        ...prev.productInteractions.optionToggles,
+                        [product.id]: [
+                          ...(prev.productInteractions.optionToggles[product.id] || []),
+                          { option: 'compare', timestamp: Date.now() }
+                        ]
+                      }
+                    }
+                  }));
+                }
+              }}
+              onAddToWishlist={(product) => {
+                setWishlist(prev => {
+                  const newWishlist = prev.includes(product.id)
+                    ? prev.filter(id => id !== product.id)
+                    : [...prev, product.id];
+                  localStorage.setItem('wishlist', JSON.stringify(newWishlist));
+                  return newWishlist;
+                });
+
+                batchAnalyticsUpdate(prev => ({
+                  ...prev,
+                  productInteractions: {
+                    ...prev.productInteractions,
+                    optionToggles: {
+                      ...prev.productInteractions.optionToggles,
+                      [product.id]: [
+                        ...(prev.productInteractions.optionToggles[product.id] || []),
+                        { option: 'wishlist', timestamp: Date.now() }
+                      ]
+                    }
+                  }
+                }));
+              }}
+              compareList={compareList}
+              wishlist={wishlist}
+              analytics={analytics}
+              setAnalytics={setAnalytics}
+              batchAnalyticsUpdate={batchAnalyticsUpdate}
+            />
+          ))}
+        </div>
+
+        {/* Wishlist Sheet */}
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button
+              variant="outline"
+              className="fixed bottom-4 right-4 z-10"
+            >
+              <Heart className="h-5 w-5 mr-2" />
+              Wishlist ({wishlist.length})
+            </Button>
+          </SheetTrigger>
+          <SheetContent>
+            <SheetHeader>
+              <SheetTitle>Your Wishlist</SheetTitle>
+              <SheetDescription>
+                Save and share your favorite sustainable fashion items
+              </SheetDescription>
+            </SheetHeader>
+            <div className="mt-6 space-y-4">
+              {wishlist.map(productId => {
+                const product = Object.values(PRODUCTS)
+                  .flat()
+                  .find(p => p.id === productId);
+
+                if (!product) return null;
+
+                return (
+                  <div key={productId} className="flex items-center justify-between">
+                    <div className="flex items-center space-x-4">
+                      <img
+                        src={product.image}
+                        alt={product.name}
+                        className="w-16 h-16 object-cover rounded"
+                      />
+                      <div>
+                        <h4 className="font-semibold">{product.name}</h4>
+                        <p className="text-sm text-gray-500">${product.basePrice}</p>
+                      </div>
+                    </div>
+                    <div className="flex space-x-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          const url = `${window.location.origin}?product=${product.id}`;
+                          navigator.clipboard.writeText(url);
+
+                          batchAnalyticsUpdate(prev => ({
+                            ...prev,
+                            productInteractions: {
+                              ...prev.productInteractions,
+                              optionToggles: {
+                                ...prev.productInteractions.optionToggles,
+                                [product.id]: [
+                                  ...(prev.productInteractions.optionToggles[product.id] || []),
+                                  { option: 'share', timestamp: Date.now() }
+                                ]
+                              }
+                            }
+                          }));
+                        }}
+                      >
+                        <Share2 className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => {
+                          setWishlist(prev => {
+                            const newWishlist = prev.filter(id => id !== product.id);
+                            localStorage.setItem('wishlist', JSON.stringify(newWishlist));
+                            return newWishlist;
+                          });
+                        }}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </SheetContent>
+        </Sheet>
+
+        {/* Compare Drawer */}
+        {compareList.length > 0 && (
+          <CompareDrawer
+            products={compareList
+              .map(id => PRODUCTS.find(p => p.id === id))
+              .filter((p): p is ProductCardProps['product'] => p !== undefined)}
+            onClose={() => setCompareList([])}
+          />
+        )}
+      </div>
+    </ErrorBoundary>
+  );
+};
+
+// Performance optimization with React.memo for child components
+const MemoizedProductCard = React.memo(ProductCard);
+const MemoizedCompareDrawer = React.memo(CompareDrawer);
+
+export default SustainableFashionPlatform;
